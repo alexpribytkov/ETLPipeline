@@ -1,0 +1,4 @@
+pandas==2.0.0
+pydantic==2.8.0
+ijson==3.2.3
+requests==2.31.0
