@@ -29,6 +29,7 @@ x-airflow-common:
       condition: service_healthy
 
 services:
+# DB for the Airflow metadata
   postgres:
     image: postgres:15
     environment:
@@ -36,7 +37,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     ports:
-      - "5432:5432"
+      - "5430:5432"
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:

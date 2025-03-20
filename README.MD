@@ -44,7 +44,7 @@ docker exec -it <containerID> bash
 | Service         | Port                                            | User    | Password |
 | --------------- | ----------------------------------------------- | ------- | -------- |
 | Airflow         | [http://localhost:8080](http://localhost:8080/) | airflow | airflow  |
-| PostgreSQL      | [http://localhost:5432](http://localhost:5432/) | airflow | airflow  |
+| Airflow(meta DB)| [http://localhost:5430](http://localhost:5430/) | airflow | airflow  |
 | ClickHouse      |                                                 |         |          |
 | Jupyter Lab     |                                                 |         |          |
 | Apache Superset |                                                 |         |          |
@@ -59,4 +59,4 @@ The PostgreSQL service is used as the backend database for Airflow. The service 
 
 ### Airflow
 
-The Airflow service is split into three separate services for the webserver, scheduler, worker and triggerer. Each service is built from the `Dockerfile` in the `./airflow-dev` directory. The services share common environment variables and volumes defined in the `x-airflow-common` section.
+The Airflow service is split into four separate services for the webserver, scheduler, executor, worker, metadata database. Each service is built from the `Dockerfile` in the `./airflow-dev` directory. The services share common environment variables and volumes defined in the `x-airflow-common` section.
