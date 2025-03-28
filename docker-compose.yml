@@ -11,7 +11,7 @@ x-airflow-common:
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
@@ -219,5 +219,26 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+##### поднятие транзакционного PSQL(создана логическая репликация через публикацию) #####
+  server_publicist:
+    image: postgres:15
+    container_name: server_publicist
+    restart: always
+    ports:
+      - '5431:5432'
+    volumes:
+      - CRM_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_PUBLICIST_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PUBLICIST_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_PUBLICIST_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_PUBLICIST_USER} -d ${POSTGRES_PUBLICIST_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   postgres-db-volume:
+  CRM_data:
