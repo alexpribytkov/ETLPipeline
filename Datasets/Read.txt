@@ -1,0 +1,5 @@
+Сюда закидываем датасеты из https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets
+cards_data.csv
+mcc_codes.json
+transactions_data.csv
+users_data.csv
