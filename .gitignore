@@ -252,3 +252,9 @@ licenses/LICENSES-ui.txt
 
 # airflow-build-dockerfile and correconding ignore file
 airflow-build-dockerfile*
+# ignore datasets
+cards_data.csv
+mcc_codes.json
+train_fraud_labels.json
+transactions_data.csv
+users_data.csv
