@@ -119,12 +119,19 @@ df.to_sql(
 )
 
 # Загрузка данных в таблицу №1 users. Грузим через copy psycopg2, тк быстрее
-df = pd.read_csv("Datasets/users_data.csv") # чтение файла csv на локальной машине
-# вставка фрейма данных Pandas в PostgreSQL
-sio = StringIO() # StringIO creates a text stream object that behaves like a file but operates in memory.
-writer = csv.writer(sio) # Создать объект CSV-писателя 
-writer.writerows(df.values) # .values return a Numpy representation of the given DataFrame
-sio.seek(0)
+# Этот код загружает данные из CSV-файла в таблицу PostgreSQL с помощью эффективного метода массовой вставки через COPY. Разберем каждую часть:
+# 1. Чтение CSV в DataFrame
+df = pd.read_csv("Datasets/users_data.csv") # Чтение CSV в DataFrame
+# 2. Подготовка данных для PostgreSQL
+sio = StringIO() # Создание буфера в оперативной памяти (как виртуального файла). StringIO creates a text stream object that behaves like a file but operates in memory.
+writer = csv.writer(sio) # Объект для записи данных в CSV-формат 
+writer.writerows(df.values) # Запись данных из DataFrame в буфер. df преобразовываем в numpy
+sio.seek(0) # Перемещение указателя буфера в начало
+# 3. Вставка данных в PostgreSQL через COPY
+# COPY — команда PostgreSQL для быстрой массовой загрузки данных.
+# FROM STDIN указывает, что данные будут читаться из входного потока (буфера sio).
+# WITH CSV — формат данных (CSV).
+# conn.commit() фиксирует транзакцию (данные сохраняются в БД)
 with conn.cursor() as c:
     c.copy_expert(
         sql="""
