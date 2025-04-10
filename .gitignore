@@ -257,3 +257,6 @@ cards_data.csv
 mcc_codes.json
 transactions_data.csv
 users_data.csv
+currency_USD
+currency_EUR
+currency_CNY
