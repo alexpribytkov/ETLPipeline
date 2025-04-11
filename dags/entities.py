@@ -1,5 +1,7 @@
 # Определение функций для тАсок
 # Можем импортировать любые библиотеки
+
+#!!!!!!!!!!CRM - DATA!!!!!!!!!!!
 add_table_1_users =  """
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -127,3 +129,19 @@ er_cards_users = """ALTER TABLE cards ADD FOREIGN KEY (client_id) REFERENCES use
 er_transactions_users = """ALTER TABLE transactions ADD FOREIGN KEY (client_id) REFERENCES users (id);"""
 
 er_transactions_cards ="""ALTER TABLE transactions ADD FOREIGN KEY (card_id) REFERENCES cards (id);"""
+
+#!!!!!!!!!!CURRENCY - DATA!!!!!!!!!!!
+add_table_5_currency = """ 
+    CREATE TABLE IF NOT EXISTS exchange(
+        id SERIAL PRIMARY KEY,
+        date DATE,
+        rate REAL,
+        currency VARCHAR
+        )"""
+
+data_table_5_currency = """
+    INSERT INTO exchange (
+        date, 
+        rate, 
+        currency
+    ) VALUES (TO_DATE(%s, 'DD/MM/YYYY'), %s, %s)"""
