@@ -131,6 +131,24 @@ er_transactions_users = """ALTER TABLE transactions ADD FOREIGN KEY (client_id) 
 er_transactions_cards ="""ALTER TABLE transactions ADD FOREIGN KEY (card_id) REFERENCES cards (id);"""
 
 #!!!!!!!!!!CURRENCY - DATA!!!!!!!!!!!
+start_date_cbr = '01/01/2010'
+end_date_cbr = '31/10/2019'
+CNY = 'R01375' 
+USD = 'R01235'
+EUR = 'EUR'
+S3='dags/datasets'
+
+def path_to_xml(start_date, end_date, currency):
+    url = f'https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1={start_date}&date_req2={end_date}&VAL_NM_RQ={currency}'
+    return url 
+# url_CNY = f'https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1={start_date}&date_req2={end_date}&VAL_NM_RQ={CNY}'
+# url_USD = f'https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1={start_date}&date_req2={end_date}&VAL_NM_RQ={USD}'
+# url_EUR = f'https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1={start_date}&date_req2={end_date}&VAL_NM_RQ={EUR}'
+
+def path_s3(path, currency):
+    path_to_s3 = f'{path}/{currency}'
+    return path_to_s3
+
 add_table_5_currency = """ 
     CREATE TABLE IF NOT EXISTS exchange(
         id SERIAL PRIMARY KEY,
@@ -145,3 +163,5 @@ data_table_5_currency = """
         rate, 
         currency
     ) VALUES (TO_DATE(%s, 'DD/MM/YYYY'), %s, %s)"""
+
+
