@@ -50,7 +50,7 @@ def load_data_json(postgres_conn_id, path_to_csv, sql_script):
 # 3. Инициализируем DAG
 with DAG(
 	dag_id="Data_to_CRM",  # Уникальный ID DAG
-	description="Создание таблиц и загрузка в них данных",
+	description="Загрузка данных CRM",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
 	schedule=None,
