@@ -16,17 +16,8 @@ DEFAULT_ARGS = {
     "owner": "admin",
     "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
     "retry_delay": 600, # задержка перед повторением
-    'start_date': days_ago(1)
+    "start_date": days_ago(1)
 }
-
-# Создаем подключение c помощью psycopg2 и выполняем конкретный sql скрипт
-def work_with_postgres(postgres_conn_id, sql_script): # в качестве аргументов передаем соединение (зашито в yaml) и sql скрипт из entities.py
-    hook = PostgresHook(postgres_conn_id=postgres_conn_id) # обозначаем hook (коннектор)
-    conn = hook.get_conn() # this returns psycopg2.connect() object
-    cursor = conn.cursor() #  Создаем курсор psycopg2 для выполнения запросов
-    cursor.execute(sql_script) # используется для выполнения SQL-запросов через курсор
-    conn.commit() # сохранить транзакцию
-    conn.close()  # закрыть соединение 
 
 # Создаем подключение c помощью psycopg2, читаем файл и записываем данные в бд с помощью «COPY» запроса
 def load_data(postgres_conn_id, path_to_csv, sql_script): # в качестве аргументов передаем соединение (зашито в yaml), путь к файлу и sql скрипт из entities.py
@@ -81,16 +72,7 @@ with DAG(
             SELECT 1
         """,
         )
-     
-    add_table_users = PythonOperator(
-        task_id="add_table_users",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.add_table_1_users
-            }
-        )
-    
+
     add_data_users = PythonOperator(
         task_id="add_data_users",
         python_callable=load_data,
@@ -100,15 +82,6 @@ with DAG(
             "sql_script": e.data_table_1_users
             }
         )    
-
-    add_table_transactions = PythonOperator(
-        task_id="add_table_transactions",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.add_table_2_transactions
-        }
-    )
 
     add_data_transactions = PythonOperator(
         task_id="add_data_transactions",
@@ -120,15 +93,6 @@ with DAG(
             }
         ) 
 
-    add_table_cards = PythonOperator(
-        task_id="add_table_cards",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.add_table_3_cards 
-        }
-    )
-
     add_data_cards = PythonOperator(
         task_id="add_data_cards",
         python_callable=load_data,
@@ -139,15 +103,6 @@ with DAG(
             }
         ) 
         
-    add_table_mcc_codes = PythonOperator(
-        task_id="add_table_mcc",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.add_table_4_mcc_codes 
-        }
-    )
-
     add_data_mcc_codes = PythonOperator(
         task_id="add_data_mcc_codes",
         python_callable=load_data_json,
@@ -158,44 +113,31 @@ with DAG(
             }
         )
 
-    er_cards_users = PythonOperator(
+    er_cards_users = PostgresOperator(
         task_id="er_cards_users",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.er_cards_users
-        }
-    )
-    
-    er_transactions_users = PythonOperator(
-        task_id="er_transactions_users",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.er_transactions_users
-        }
-    )
+        postgres_conn_id="server_publicist",
+        sql= e.er_cards_users
+        )   
 
-    er_transactions_cards = PythonOperator(
+    er_transactions_users = PostgresOperator(
+        task_id="er_transactions_users",
+        postgres_conn_id="server_publicist",
+        sql= e.er_transactions_users
+        )   
+
+    er_transactions_cards = PostgresOperator(
         task_id="er_transactions_cards",
-        python_callable=work_with_postgres,
-        op_kwargs={
-            "postgres_conn_id": "server_publicist",
-            "sql_script": e.er_transactions_cards
-        }
-    )
+        postgres_conn_id="server_publicist",
+        sql= e.er_transactions_cards
+        )  
 
 (
     dag_start
     >> check_db_connection 
-    >> add_table_users
     >> add_data_users
-    >> add_table_transactions
     >> add_data_transactions
-    >> add_table_cards
     >> add_data_cards
-    >> add_table_mcc_codes
-    >> add_data_mcc_codes 
+    >> add_data_mcc_codes
     >> er_cards_users 
     >> er_transactions_users 
     >> er_transactions_cards 

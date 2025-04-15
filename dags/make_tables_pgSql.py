@@ -67,25 +67,7 @@ with DAG(
         task_id="add_table_currency",
         postgres_conn_id="server_publicist",
         sql= e.add_table_5_currency
-        )
-    
-    er_cards_users = PostgresOperator(
-        task_id="er_cards_users",
-        postgres_conn_id="server_publicist",
-        sql= e.er_cards_users
-        )   
-
-    er_transactions_users = PostgresOperator(
-        task_id="er_transactions_users",
-        postgres_conn_id="server_publicist",
-        sql= e.er_transactions_users
-        )   
-
-    er_transactions_cards = PostgresOperator(
-        task_id="er_transactions_cards",
-        postgres_conn_id="server_publicist",
-        sql= e.er_transactions_cards
-        )   
+        ) 
 (
     dag_start
     >> check_db_connection 
@@ -94,8 +76,5 @@ with DAG(
     >> add_table_cards
     >> add_table_mcc_codes
     >> add_table_currency
-    >> er_cards_users 
-    >> er_transactions_users 
-    >> er_transactions_cards 
     >> dag_end
 )

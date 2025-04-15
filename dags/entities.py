@@ -56,6 +56,7 @@ add_table_2_transactions = """
         errors VARCHAR(150)             
     );
 """
+
 data_table_2_transactions = """            
     COPY transactions (
         id,
