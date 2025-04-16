@@ -54,7 +54,7 @@ def load_data(postgres_conn_id, s_file, sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="Data_cbr_historical",  # Уникальный ID DAG
+	dag_id="CBR_historical_data",  # Уникальный ID DAG
 	description="Загрузка исторических курсов",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG

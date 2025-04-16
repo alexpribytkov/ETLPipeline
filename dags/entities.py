@@ -1,3 +1,4 @@
+from datetime import datetime
 # Определение функций для тАсок
 # Можем импортировать любые библиотеки
 
@@ -133,10 +134,10 @@ er_transactions_cards ="""ALTER TABLE transactions ADD FOREIGN KEY (card_id) REF
 
 #!!!!!!!!!!CURRENCY - DATA!!!!!!!!!!!
 start_date_cbr = '01/01/2010'
-end_date_cbr = '31/10/2019'
+end_date_cbr = datetime.now().strftime("%d-%m-%Y")
 CNY = 'R01375' 
 USD = 'R01235'
-EUR = 'EUR'
+EUR = 'R01239'
 S3='dags/datasets'
 
 def path_to_xml(start_date, end_date, currency):

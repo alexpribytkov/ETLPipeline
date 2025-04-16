@@ -9,6 +9,8 @@ In this project uses the following stack of technology:
 - Visualization is deployed on **Apache Superset**.
 - A shared folder called data_lake is used as a data warehouse (it can be regarded as S3).
 
+![Project](Project.jpg)
+
 ## Building the Docker Images
 
 To build the Docker images, navigate to the root directory of the project in your terminal and run the following command in background:
