@@ -1,4 +1,5 @@
 ## Оперативная инфа 
+import entities as e # Сюда запишем наши функции
 from airflow import DAG # Импорт дага
 from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
@@ -6,7 +7,7 @@ from airflow.utils.dates import days_ago
 import requests # Для запросов к серверу
 import json # Для обработки ответов сервера
 import csv
-from datetime import datetime
+
 
 # 1. Определяем настройки по умолчанию
 DEFAULT_ARGS = {
@@ -18,8 +19,6 @@ DEFAULT_ARGS = {
 
 #EXTRACT
 def extract_market_moex(url):
-  current_dateTime = datetime.now().strftime("%d-%m-%Y") # Определение даты и времени для дальнейшего создания файла
-  path = 'dags/datasets' # Определение пути для сохранения файла 
   response = requests.get(url) # Получим ответ от сервера
   result = json.loads(response.text)
   data = result['history']['data']   # Преобразование строки JSON в список списков (тянем данные)
@@ -35,7 +34,7 @@ def extract_market_moex(url):
     a = len(resp_data) # узнаем количество полученных строк из этого запроса. Если опять 100 то цикл продолжается
     b = b + 100
     data += resp_data # объединяем списки
-  with open(f"{path}/market_info_{current_dateTime}.csv", "w", newline="",encoding='UTF-8') as file: # сохраняем объединенные списки в формате csv
+  with open(e.path_to_market_data, "w", newline="",encoding='UTF-8') as file: # сохраняем объединенные списки в формате csv
     writer = csv.writer(file)
     writer.writerow(header)  # Эту строку пропускаем, чтобы не писать заголовок
     writer.writerows(data)

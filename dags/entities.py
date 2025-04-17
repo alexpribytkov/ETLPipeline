@@ -134,7 +134,7 @@ er_transactions_cards ="""ALTER TABLE transactions ADD FOREIGN KEY (card_id) REF
 
 #!!!!!!!!!!CURRENCY - DATA!!!!!!!!!!!
 start_date_cbr = '01/01/2010'
-end_date_cbr = datetime.now().strftime("%d-%m-%Y")
+end_date_cbr = datetime.now().strftime("%d/%m/%Y")
 CNY = 'R01375' 
 USD = 'R01235'
 EUR = 'R01239'
@@ -166,4 +166,10 @@ data_table_5_currency = """
         currency
     ) VALUES (TO_DATE(%s, 'DD/MM/YYYY'), %s, %s)"""
 
+#!!!!!!!!!!MARKET - DATA!!!!!!!!!!!
 
+def current_dateTime():
+    current_date = datetime.now().strftime("%d-%m-%Y") # Определение даты и времени для дальнейшего создания файла
+    return current_date
+
+path_to_market_data = f"{S3}/market_info_{current_dateTime()}.csv"

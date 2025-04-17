@@ -9,7 +9,7 @@ In this project uses the following stack of technology:
 - Visualization is deployed on **Apache Superset**.
 - A shared folder called data_lake is used as a data warehouse (it can be regarded as S3).
 
-![Project](Project.jpg)
+![Project](ETL_pipeline.jpg)
 
 ## Building the Docker Images
 
