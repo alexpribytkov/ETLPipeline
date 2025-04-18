@@ -1,15 +1,25 @@
-# **ETL Pipeline** 
+# **ETL Pipeline for financial organization** 
 
-This project is an example of a full-fledged ETL process. Open APIs and CSV tables are used as data sources. 
-In this project uses the following stack of technology:
-- The main tool for ETL is **Apache Spark**. 
-- For code debugging, there is a **Jupyter Notebook** with **Pandas** and **Spark** installed inside.
-- **Apache Airflow** is used as the orchestrator. 
+This project is an example of a full-fledged ETL process for organizations which are participated in finance. Open APIs and CSV tables are used as data sources.
+The following stack of technologies is used in the Project:
+* [Docker v4.22.1](https://www.docker.com/)
+* [Postgres v15](https://www.postgresql.org/)
+* [ClickHouse](https://clickhouse.com/)
+* [Python v3.8](https://www.python.org/)
+* [Apache Airflow v2.8.4](https://airflow.apache.org/)
+* [DBT](https://www.getdbt.com/)
+* [Apache Superset](https://superset.apache.org/)
+
+## Pipeline
+![Project](ETL_pipeline.jpg)
+
+- Data from APIs of ["The Moscow Exchange"](https://www.moex.com/a2193) and ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/) and ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded to shared folder called "datasets" which is used for backups (it can be regarded as S3).
+- The data from S3 is uploaded to **PostgreSQL** database using **Apache Airflow**.
+- "Logical replication" is created via PostgreSQL's internal tools.
+- Data marts are created using the **PostgreSQL engine**, which is part of **ClickHouse**.
+- Aggregated representations of data are created via **DBT**.
 - All data marts are stored in **ClickHouse**. 
 - Visualization is deployed on **Apache Superset**.
-- A shared folder called data_lake is used as a data warehouse (it can be regarded as S3).
-
-![Project](ETL_pipeline.jpg)
 
 ## Building the Docker Images
 
@@ -42,21 +52,21 @@ docker exec -it <containerID> bash
 - Docker Compose: Also ensure that Docker Compose is installed. You can find it [here](https://docs.docker.com/compose/install/).
 
 ## Services
-
 | Service         | Port                                            | User    | Password |
 | --------------- | ----------------------------------------------- | ------- | -------- |
 | Airflow         | [http://localhost:8080](http://localhost:8080/) | airflow | airflow  |
 | Airflow(meta DB)| [http://localhost:5430](http://localhost:5430/) | airflow | airflow  |
-| ClickHouse      |                                                 |         |          |
-| Jupyter Lab     |                                                 |         |          |
+| ClickHouse      |                                                 |         |          |    |
 | Apache Superset |                                                 |         |          |
 
 ### Source
+- RESTful API ["The Moscow Exchange"](https://www.moex.com/a2193) 
+- SOAP API ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/)
+- ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded from Kaggle. 
 
-Sources of synthetic data are located in the `synthetic_data` folder. The remaining data can be obtained via `Open API`.
+Data is located in the `datasets` folder.
 
 ### PostgreSQL
-
 The PostgreSQL service is used as the backend database for Airflow. The service uses the `postgres:15` image and exposes the default PostgreSQL port `5432`. The data for the service is persisted in the `postgres-db-volume` volume.
 
 ### Airflow

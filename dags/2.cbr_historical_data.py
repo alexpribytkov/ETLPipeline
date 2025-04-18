@@ -6,6 +6,7 @@ from airflow.operators.empty import EmptyOperator # Оператор-пусты�
 from airflow.providers.postgres.hooks.postgres import PostgresHook # Определяет, как подключиться к Postgres. Определили его в connection Airflow, с помощью компоуза
 from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
 from airflow.utils.dates import days_ago
+from airflow.sensors.external_task import ExternalTaskSensor # проверяет статус задачи или DAG в другом DAG
 import requests #Для запросов к серверу
 import xml.etree.ElementTree as ET
 
@@ -13,26 +14,26 @@ import xml.etree.ElementTree as ET
 DEFAULT_ARGS = {
     "owner": "admin",
     "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
-    "retry_delay": 600, # задержка перед повторением
+    "retry_delay": 60, # задержка перед повторением
     'start_date': days_ago(1)
 }
 
-# Тянем по API данные в формате XML и сохраняем их в локальный файл `s_file` XML 
-def extract_data(url, s_file):
+# Тянем по API данные в формате XML и сохраняем их в локальный файл `path` XML 
+def extract_data(url, path):
   request = requests.get(url, verify=False)  # Выполняем GET-запрос для получения данных за указанную дату
     # Сохраняем полученные данные (в формате XML) в локальный файл
-  with open(s_file, "w", encoding="utf-8") as tmp_file:
+  with open(path, "w", encoding="utf-8") as tmp_file:
     tmp_file.write(request.text)  # Записываем текст ответа в файл
 
 # Создаем подключение c помощью psycopg2, читаем файл и записываем данные в бд с помощью «INSERT» запроса
-def load_data(postgres_conn_id, s_file, sql_script):
+def load_data(postgres_conn_id, path, sql_script):
   hook = PostgresHook(postgres_conn_id=postgres_conn_id) # обозначаем hook (коннектор)
   conn = hook.get_conn() # this returns psycopg2.connect() object
   cursor = conn.cursor() #  Создаем курсор psycopg2 для выполнения запросов 
   # Устанавливаем парсер для XML с кодировкой UTF-8
   parser = ET.XMLParser(encoding="utf-8")
   # Чтение XML файла
-  tree = ET.parse(s_file, parser=parser)
+  tree = ET.parse(path, parser=parser)
   # Получение корневого элемента
   root = tree.getroot()
   # Перебор всех валют в XML и извлечение нужных данных
@@ -54,12 +55,12 @@ def load_data(postgres_conn_id, s_file, sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="CBR_historical_data",  # Уникальный ID DAG
+	dag_id="2.CBR_historical_data",  # Уникальный ID DAG
 	description="Загрузка исторических курсов",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
-	schedule=None,
-  catchup=False,  # Отключить выполнение пропущенных запусков
+	schedule='@once',
+    catchup=False,  # Отключить выполнение пропущенных запусков
 	max_active_runs=1,  
 	max_active_tasks=1
 ) as dag:
@@ -78,12 +79,17 @@ with DAG(
         """,
         )
 
+    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
+        task_id="wait_for_tables",
+        external_dag_id="1.make_tables_pgSql"  # ID внешнего DAG
+    )
+
     extract_usd = PythonOperator(
         task_id="extract_usd",
         python_callable=extract_data,
         op_kwargs={
             "url": e.path_to_xml(e.start_date_cbr, e.end_date_cbr, e.USD),
-            "s_file": e.path_s3(e.S3, 'USD')
+            "path": e.path_s3(e.S3, 'USD')
             }
         )
     
@@ -92,7 +98,7 @@ with DAG(
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "s_file": e.path_s3(e.S3, 'USD'),
+            "path": e.path_s3(e.S3, 'USD'),
             "sql_script": e.data_table_5_currency
             }
         )
@@ -102,7 +108,7 @@ with DAG(
         python_callable=extract_data,
         op_kwargs={
             "url": e.path_to_xml(e.start_date_cbr, e.end_date_cbr, e.EUR),
-            "s_file": e.path_s3(e.S3, 'EUR')
+            "path": e.path_s3(e.S3, 'EUR')
             }
         )
     
@@ -111,7 +117,7 @@ with DAG(
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "s_file": e.path_s3(e.S3, 'EUR'),
+            "path": e.path_s3(e.S3, 'EUR'),
             "sql_script": e.data_table_5_currency
             }
         )
@@ -121,7 +127,7 @@ with DAG(
         python_callable=extract_data,
         op_kwargs={
             "url": e.path_to_xml(e.start_date_cbr, e.end_date_cbr, e.CNY),
-            "s_file": e.path_s3(e.S3, 'CNY')
+            "path": e.path_s3(e.S3, 'CNY')
             }
         )
     
@@ -130,19 +136,20 @@ with DAG(
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "s_file": e.path_s3(e.S3, 'CNY'),
+            "path": e.path_s3(e.S3, 'CNY'),
             "sql_script": e.data_table_5_currency
             }
         )
 
 (
     dag_start
+    >> wait_for_tables
     >> check_db_connection 
     >> extract_usd
     >> load_usd
     >> extract_eur
     >> load_eur
-    >>extract_cny
-    >>load_cny
+    >> extract_cny
+    >> load_cny
     >> dag_end
 )

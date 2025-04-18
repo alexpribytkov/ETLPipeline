@@ -3,6 +3,11 @@ from datetime import datetime
 # Можем импортировать любые библиотеки
 
 #!!!!!!!!!!CRM - DATA!!!!!!!!!!!
+users_data_path = "dags/datasets/users_data.csv"
+transactions_data_path = "dags/datasets/transactions_data.csv"
+cards_data_path = "dags/datasets/cards_data.csv"
+mcc_codes_path ="dags/datasets/mcc_codes.json"
+
 add_table_1_users =  """
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -167,9 +172,67 @@ data_table_5_currency = """
     ) VALUES (TO_DATE(%s, 'DD/MM/YYYY'), %s, %s)"""
 
 #!!!!!!!!!!MARKET - DATA!!!!!!!!!!!
+url_moex = 'http://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities.json'
 
 def current_dateTime():
     current_date = datetime.now().strftime("%d-%m-%Y") # Определение даты и времени для дальнейшего создания файла
     return current_date
 
 path_to_market_data = f"{S3}/market_info_{current_dateTime()}.csv"
+
+add_table_6_market = """ 
+    CREATE TABLE IF NOT EXISTS market_data (
+	id 	                      SERIAL PRIMARY KEY,
+    BOARDID                   VARCHAR(12),
+    TRADEDATE                 DATE,
+    SHORTNAME                 VARCHAR(50),
+    SECID                     VARCHAR(36),
+    NUMTRADES                 INTEGER,
+    VALUE                     NUMERIC,
+    OPEN                      NUMERIC,
+    LOW                       NUMERIC,
+    HIGH                      NUMERIC,
+    LEGALCLOSEPRICE           NUMERIC,
+    WAPRICE                   NUMERIC,
+    CLOSE                     NUMERIC,
+    VOLUME                    BIGINT,
+    MARKETPRICE2              NUMERIC,
+    MARKETPRICE3              NUMERIC,
+    ADMITTEDQUOTE             NUMERIC,
+    MP2VALTRD                 NUMERIC,
+    MARKETPRICE3TRADESVALUE   NUMERIC,
+    ADMITTEDVALUE             NUMERIC,
+    WAVAL                     NUMERIC,
+    TRADINGSESSION            INTEGER,
+    CURRENCYID                VARCHAR(10),
+    TRENDCLSPR                NUMERIC,
+    TRADE_SESSION_DATE        DATE
+        )"""
+
+data_table_6_market = """ 
+    COPY market_data (
+                BOARDID,
+                TRADEDATE,
+                SHORTNAME,
+                SECID,
+                NUMTRADES,
+                VALUE,
+                OPEN,
+                LOW,
+                HIGH,
+                LEGALCLOSEPRICE,
+                WAPRICE,
+                CLOSE,
+                VOLUME,
+                MARKETPRICE2,
+                MARKETPRICE3,
+                ADMITTEDQUOTE,
+                MP2VALTRD,
+                MARKETPRICE3TRADESVALUE,
+                ADMITTEDVALUE,
+                WAVAL,
+                TRADINGSESSION,
+                CURRENCYID,
+                TRENDCLSPR,
+                TRADE_SESSION_DATE
+        ) FROM STDIN WITH CSV"""

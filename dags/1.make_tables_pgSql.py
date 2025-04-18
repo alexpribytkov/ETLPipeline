@@ -15,11 +15,11 @@ DEFAULT_ARGS = {
 
 # 2. Инициализируем DAG
 with DAG(
-	dag_id="make_tables_pgSql",  # Уникальный ID DAG
+	dag_id="1.make_tables_pgSql",  # Уникальный ID DAG
 	description="Создание таблиц",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
-	schedule=None,
+	schedule='@once',
     catchup=False,  # Отключить выполнение пропущенных запусков
 	max_active_runs=1,  
 	max_active_tasks=1
@@ -67,7 +67,14 @@ with DAG(
         task_id="add_table_currency",
         postgres_conn_id="server_publicist",
         sql= e.add_table_5_currency
-        ) 
+        )
+    
+    add_table_market = PostgresOperator(
+        task_id="add_table_market",
+        postgres_conn_id="server_publicist",
+        sql= e.add_table_6_market
+        )
+
 (
     dag_start
     >> check_db_connection 
@@ -76,5 +83,6 @@ with DAG(
     >> add_table_cards
     >> add_table_mcc_codes
     >> add_table_currency
+    >> add_table_market
     >> dag_end
 )

@@ -6,6 +6,7 @@ from airflow.operators.empty import EmptyOperator # Оператор-пусты�
 from airflow.providers.postgres.hooks.postgres import PostgresHook # Определяет, как подключиться к Postgres. Определили его в connection Airflow, с помощью компоуза
 from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
 from airflow.utils.dates import days_ago
+from airflow.sensors.external_task import ExternalTaskSensor # проверяет статус задачи или DAG в другом DAG
 import pandas as pd
 from io import StringIO
 import csv
@@ -15,16 +16,16 @@ import json
 DEFAULT_ARGS = {
     "owner": "admin",
     "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
-    "retry_delay": 600, # задержка перед повторением
+    "retry_delay": 60, # задержка перед повторением
     "start_date": days_ago(1)
 }
 
 # Создаем подключение c помощью psycopg2, читаем файл и записываем данные в бд с помощью «COPY» запроса
-def load_data(postgres_conn_id, path_to_csv, sql_script): # в качестве аргументов передаем соединение (зашито в yaml), путь к файлу и sql скрипт из entities.py
+def load_data(postgres_conn_id, path, sql_script): # в качестве аргументов передаем соединение (зашито в yaml), путь к файлу и sql скрипт из entities.py
     hook = PostgresHook(postgres_conn_id=postgres_conn_id) # обозначаем hook (коннектор)
     conn = hook.get_conn() # this returns psycopg2.connect() object
     cursor = conn.cursor() #  Создаем курсор psycopg2 для выполнения запросов
-    df = pd.read_csv(path_to_csv) # Чтение CSV в DataFrame
+    df = pd.read_csv(path) # Чтение CSV в DataFrame
     sio = StringIO() # Создание буфера в оперативной памяти (как виртуального файла). StringIO creates a text stream object that behaves like a file but operates in memory.
     writer = csv.writer(sio) # Объект для записи данных в CSV-формат 
     writer.writerows(df.values) # Запись данных из DataFrame в буфер. df преобразовываем в numpy
@@ -36,11 +37,11 @@ def load_data(postgres_conn_id, path_to_csv, sql_script): # в качестве 
     conn.commit() # сохранить транзакцию
     conn.close() # закрыть соединение 
 
-def load_data_json(postgres_conn_id, path_to_csv, sql_script):
+def load_data_json(postgres_conn_id, path, sql_script):
     hook = PostgresHook(postgres_conn_id=postgres_conn_id)
     conn = hook.get_conn()  # this returns psycopg2.connect() object
     cursor = conn.cursor() #  Создаем курсор psycopg2 для выполнения запросов
-    with open(path_to_csv, "r", encoding="utf-8") as jsonFile:
+    with open(path, "r", encoding="utf-8") as jsonFile:
         data = json.load(jsonFile) # Преобразование строки JSON в словарь. Парсинг JSON в dict.
     records = [(key, value) for key, value in data.items()] # Преобразовываем данные в список из кортежей [('5812', 'Eating Places and Restaurants'),('5541', 'Service Stations'),]
     cursor.executemany(sql_script,records) # вставляем каждое значение в кортеже в %s, executemany - как итератор проходится по списку и вставляет значения в %s
@@ -49,11 +50,11 @@ def load_data_json(postgres_conn_id, path_to_csv, sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="CRM_data",  # Уникальный ID DAG
+	dag_id="3.CRM_data",  # Уникальный ID DAG
 	description="Загрузка данных CRM",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
-	schedule=None,
+	schedule='@once',
     catchup=False,  # Отключить выполнение пропущенных запусков
 	max_active_runs=1,
 	max_active_tasks=1
@@ -73,12 +74,17 @@ with DAG(
         """,
         )
 
+    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
+        task_id="wait_for_tables",
+        external_dag_id="1.make_tables_pgSql"  # ID внешнего DAG
+    )
+
     add_data_users = PythonOperator(
         task_id="add_data_users",
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "path_to_csv": "dags/datasets/users_data.csv",
+            "path": e.users_data_path,
             "sql_script": e.data_table_1_users
             }
         )    
@@ -88,7 +94,7 @@ with DAG(
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "path_to_csv": "dags/datasets/transactions_data.csv",
+            "path": e.transactions_data_path,
             "sql_script": e.data_table_2_transactions
             }
         ) 
@@ -98,7 +104,7 @@ with DAG(
         python_callable=load_data,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "path_to_csv": "dags/datasets/cards_data.csv",
+            "path": e.cards_data_path,
             "sql_script": e.data_table_3_cards
             }
         ) 
@@ -108,7 +114,7 @@ with DAG(
         python_callable=load_data_json,
         op_kwargs={
             "postgres_conn_id": "server_publicist",
-            "path_to_csv": "dags/datasets/mcc_codes.json",
+            "path": e.mcc_codes_path,
             "sql_script": e.data_table_4_mcc_codes
             }
         )
@@ -133,6 +139,7 @@ with DAG(
 
 (
     dag_start
+    >> wait_for_tables
     >> check_db_connection 
     >> add_data_users
     >> add_data_transactions
