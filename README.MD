@@ -14,8 +14,8 @@ The following stack of technologies is used in the Project:
 ![Project](ETL_pipeline.jpg)
 
 - Data from APIs of ["The Moscow Exchange"](https://www.moex.com/a2193) and ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/) and ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded to shared folder called "datasets" which is used for backups (it can be regarded as S3).
-- The data from S3 is uploaded to **PostgreSQL** database using **Apache Airflow**.
-- "Logical replication" is created via PostgreSQL's internal tools.
+- ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) from S3 is uploaded to **PostgreSQL** database using **Apache Airflow**. This transactional database can be regarded as **CRM in Bank**
+- The other data from S3 is uploaded to **ClickHouse** database using **Apache Airflow**.
 - Data marts are created using the **PostgreSQL engine**, which is part of **ClickHouse**.
 - Aggregated representations of data are created via **DBT**.
 - All data marts are stored in **ClickHouse**. 
@@ -52,22 +52,24 @@ docker exec -it <containerID> bash
 - Docker Compose: Also ensure that Docker Compose is installed. You can find it [here](https://docs.docker.com/compose/install/).
 
 ## Services
-| Service         | Port                                            | User    | Password |
-| --------------- | ----------------------------------------------- | ------- | -------- |
-| Airflow         | [http://localhost:8080](http://localhost:8080/) | airflow | airflow  |
-| Airflow(meta DB)| [http://localhost:5430](http://localhost:5430/) | airflow | airflow  |
-| ClickHouse      |                                                 |         |          |    |
-| Apache Superset |                                                 |         |          |
+
+| Service          | Port                                             | DataBase           | User     | Password |
+| ---------------- | ------------------------------------------------ | ------------------ | -------- | -------- |
+| Airflow          | [http://localhost:8080](http://localhost:8080/)  |                    | airflow  | airflow  |
+| Airflow(meta DB) | localhost:5430                                   | airflow            | airflow  | airflow  |
+| PostgreSQL       | localhost:5431                                   | postgres_publicist | admin    | admin    |
+| ClickHouse       | localhost:8123                                   | data               | admin    | admin    |
+| Apache Superset  |                                                  |                    |          |          |
 
 ### Source
 - RESTful API ["The Moscow Exchange"](https://www.moex.com/a2193) 
 - SOAP API ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/)
 - ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded from Kaggle. 
 
-Data is located in the `datasets` folder.
+Data is located in the folder called `data_lake`.
 
 ### PostgreSQL
-The PostgreSQL service is used as the backend database for Airflow. The service uses the `postgres:15` image and exposes the default PostgreSQL port `5432`. The data for the service is persisted in the `postgres-db-volume` volume.
+The PostgreSQL service is used as the backend database for Airflow. The service uses the `postgres:15` image and exposes the default PostgreSQL port `5432`. The data for the service is persisted in the `CRM_data` volume.
 
 ### Airflow
 

@@ -3,10 +3,10 @@ from datetime import datetime
 # Можем импортировать любые библиотеки
 
 #!!!!!!!!!!CRM - DATA!!!!!!!!!!!
-users_data_path = "dags/datasets/users_data.csv"
-transactions_data_path = "dags/datasets/transactions_data.csv"
-cards_data_path = "dags/datasets/cards_data.csv"
-mcc_codes_path ="dags/datasets/mcc_codes.json"
+users_data_path = "/opt/airflow/data_lake/users_data.csv"
+transactions_data_path = "/opt/airflow/data_lake/transactions_data.csv"
+cards_data_path = "/opt/airflow/data_lake/cards_data.csv"
+mcc_codes_path ="/opt/airflow/data_lake/mcc_codes.json"
 
 add_table_1_users =  """
     CREATE TABLE IF NOT EXISTS users (
@@ -143,8 +143,7 @@ end_date_cbr = datetime.now().strftime("%d/%m/%Y")
 CNY = 'R01375' 
 USD = 'R01235'
 EUR = 'R01239'
-S3='dags/datasets'
-
+S3='/opt/airflow/data_lake'
 def path_to_xml(start_date, end_date, currency):
     url = f'https://www.cbr.ru/scripts/XML_dynamic.asp?date_req1={start_date}&date_req2={end_date}&VAL_NM_RQ={currency}'
     return url 

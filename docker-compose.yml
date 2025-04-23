@@ -222,8 +222,6 @@ services:
         condition: service_completed_successfully
 
 ##### Поднятие транзакционного PostgreSQL.
-##### Сюда все данные загружаются, а затем с данного сервера загружаются в clickhouse
-##### Cоздана логическая репликация через публикацию
   server_publicist:
     image: postgres:15
     container_name: server_publicist
@@ -243,38 +241,32 @@ services:
       retries: 5
       start_period: 10s
 
-##### Поднятие транзакционного PostgreSQL.
-#####Сервер для логической репликации
-  server_subscription:
-    image: postgres:15
-    container_name: server_subscription
-    ports:
-      - '5433:5432'
-    command:
-      - "postgres"
-      - "-c"
-      - "wal_level=logical"
-      - "-c"
-      - "work_mem=512MB"
-    restart: unless-stopped
-    volumes:
-      - './postgres/server_subscription:/docker-entrypoint-initdb.d/'
+  server_clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: server_clickhouse
+    ports: 
+      - "8123:8123" # HTTP-интерфейс.Порт для HTTP-запросов (используется в веб-интерфейсах и REST API)
+      - "9000:9000" # Клиентские соединения. Основной порт для ClickHouse-клиентов и JDBC/ODBC.
+      #- "9009:9009"  # Межсерверная репликация (опционально). Для распределенных запросов между серверами    
     environment:
-      POSTGRES_USER: ${POSTGRES_SUBSCRIPTION_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_SUBSCRIPTION_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_SUBSCRIPTION_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse # основная папка, в которой ClickHouse хранит данные
+      #- ./data_lake:/opt/data_lake
+      - ./docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml # файлы с настройками конфигурации сервера
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUBSCRIPTION_USER} -d ${POSTGRES_SUBSCRIPTION_DB}"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "wget", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 10s
       retries: 5
-      start_period: 10s
     depends_on:
       server_publicist:
         condition: service_healthy
 
-
-
 volumes:
   postgres-db-volume:
   CRM_data:
+  clickhouse_data:
