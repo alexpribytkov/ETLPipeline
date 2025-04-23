@@ -2,7 +2,8 @@
 import entities as e # Сюда запишем наши функции
 from airflow import DAG # Импорт дага
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
-from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
+#From 6.0.0 the PostgresOperator has been deprecated, you should use SQLExecuteQueryOperator.
+from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос 
 from airflow.utils.dates import days_ago
 
 # 1. Определяем настройки по умолчанию

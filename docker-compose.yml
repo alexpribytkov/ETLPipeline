@@ -17,6 +17,7 @@ x-airflow-common:
     AIRFLOW_CONN_SERVER_PUBLICIST: 'postgresql://${POSTGRES_PUBLICIST_USER}:${POSTGRES_PUBLICIST_PASSWORD}@host.docker.internal:5431/${POSTGRES_PUBLICIST_DB}' # создаем Connection — это объект, который хранит параметры подключения к CRM.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
+    - ./data_lake:/opt/airflow/data_lake # Указываем путь к дата лейку. By design docker containers can't interact directly with the host machine's file system. For the container to be able to "see" this file you will have to use a volume.
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
@@ -220,7 +221,9 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-##### поднятие транзакционного PSQL(создана логическая репликация через публикацию) #####
+##### Поднятие транзакционного PostgreSQL.
+##### Сюда все данные загружаются, а затем с данного сервера загружаются в clickhouse
+##### Cоздана логическая репликация через публикацию
   server_publicist:
     image: postgres:15
     container_name: server_publicist
@@ -239,6 +242,38 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+##### Поднятие транзакционного PostgreSQL.
+#####Сервер для логической репликации
+  server_subscription:
+    image: postgres:15
+    container_name: server_subscription
+    ports:
+      - '5433:5432'
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "work_mem=512MB"
+    restart: unless-stopped
+    volumes:
+      - './postgres/server_subscription:/docker-entrypoint-initdb.d/'
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUBSCRIPTION_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUBSCRIPTION_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_SUBSCRIPTION_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUBSCRIPTION_USER} -d ${POSTGRES_SUBSCRIPTION_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      server_publicist:
+        condition: service_healthy
+
+
 
 volumes:
   postgres-db-volume:
