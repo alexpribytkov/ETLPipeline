@@ -13,8 +13,8 @@ The following stack of technologies is used in the Project:
 ## Pipeline
 ![Project](ETL_pipeline.jpg)
 
-- Data from APIs of ["The Moscow Exchange"](https://www.moex.com/a2193) and ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/) and ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded to shared folder called "datasets" which is used for backups (it can be regarded as S3).
-- ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) from S3 is uploaded to **PostgreSQL** database using **Apache Airflow**. This transactional database can be regarded as **CRM in Bank**
+- Data from APIs of ["The Moscow Exchange"](https://www.moex.com/a2193), ["The Central Bank of the Russian Federation"](https://www.cbr.ru/development/SXML/) and ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) is uploaded to shared folder called "datalake" which can be regarded as S3.
+- ["Bank Financial Transactions"](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets) data is uploaded to **PostgreSQL** database using **Apache Airflow**. It can be regarded as **CRM in Bank** back-end database.
 - The other data from S3 is uploaded to **ClickHouse** database using **Apache Airflow**.
 - Data marts are created using the **PostgreSQL engine**, which is part of **ClickHouse**.
 - Aggregated representations of data are created via **DBT**.
