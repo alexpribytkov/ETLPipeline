@@ -6,7 +6,6 @@ from airflow.operators.empty import EmptyOperator # Оператор-пусты�
 from airflow.utils.dates import days_ago
 from airflow.providers.postgres.hooks.postgres import PostgresHook # Определяет, как подключиться к Postgres. Определили его в connection Airflow, с помощью компоуза
 from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
-from airflow.sensors.external_task import ExternalTaskSensor # проверяет статус задачи или DAG в другом DAG
 import requests # Для запросов к серверу
 import pandas as pd
 from io import StringIO
@@ -86,11 +85,6 @@ with DAG(
         """,
         )
 
-    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
-        task_id="wait_for_tables",
-        external_dag_id="1.make_tables_pgSql"  # ID внешнего DAG
-    )
-
     extract_data = PythonOperator(
         task_id="extract_data",
         python_callable=extract_market_moex,
@@ -112,7 +106,6 @@ with DAG(
 
 (
     dag_start
-    >> wait_for_tables
     >> check_db_connection
     >> extract_data
     >> load_data

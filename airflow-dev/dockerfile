@@ -1,3 +1,24 @@
 FROM apache/airflow:2.8.4
-ADD requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование файла <requirements.txt> с вашего компьютера в контейнер (определенную ранее директорию)
+COPY requirements.txt /requirements.txt
+# RUN выполняет команду и создаёт слой образа.
+
+# По умолчанию официальный Python-образ в Docker не включает системный набор CA-сертификатов, что приводит к сбоям HTTPS-запросов из pip .
+USER root
+RUN apt-get update \
+ && apt-get install -y ca-certificates \
+ && update-ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+USER airflow
+
+ 
+# Флаги при установке для корректной установки зависимостей из requirements (в том числе airflow-providers-clickhouse)
+# Обновляем pip
+# Флаг --trusted-host позволяет pip пропустить проверку SSL для указанных хостов 
+RUN python -m pip install --upgrade pip \
+ && pip install \
+      --trusted-host pypi.org \
+      --trusted-host files.pythonhosted.org \
+      --no-cache-dir \
+      -r /requirements.txt
