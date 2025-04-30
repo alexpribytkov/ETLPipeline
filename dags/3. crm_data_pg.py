@@ -50,8 +50,8 @@ def load_data_json(postgres_conn_id, path, sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="3.CRM_data",  # Уникальный ID DAG
-	description="Загрузка данных CRM",
+	dag_id="3.CRM_data_pgsql",  # Уникальный ID DAG
+	description="Загрузка данных в CRM (бд - postgreSQL)",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
 	schedule='@once',
@@ -69,15 +69,32 @@ with DAG(
     check_db_connection = PostgresOperator(
         task_id="check_db_connection",
         postgres_conn_id="server_publicist",
-        sql="""
-            SELECT 1
-        """,
+        sql="""SELECT 1"""
+        )
+    
+    add_table_users = PostgresOperator(
+        task_id="add_table_users",
+        postgres_conn_id="server_publicist",
+        sql=e.add_table_1_users
         )
 
-    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
-        task_id="wait_for_tables",
-        external_dag_id="1.make_tables_pgSql"  # ID внешнего DAG
-    )
+    add_table_transactions = PostgresOperator(
+        task_id="add_table_transactions",
+        postgres_conn_id="server_publicist",
+        sql=e.add_table_2_transactions
+        )
+
+    add_table_cards = PostgresOperator(
+        task_id="add_table_cards",
+        postgres_conn_id="server_publicist",
+        sql=e.add_table_3_cards
+        )
+    
+    add_table_mcc_codes = PostgresOperator(
+        task_id="add_table_mcc_codes",
+        postgres_conn_id="server_publicist",
+        sql= e.add_table_4_mcc_codes
+        )
 
     add_data_users = PythonOperator(
         task_id="add_data_users",
@@ -139,8 +156,11 @@ with DAG(
 
 (
     dag_start
-    >> wait_for_tables
-    >> check_db_connection 
+    >> check_db_connection
+    >> add_table_users
+    >> add_table_transactions
+    >> add_table_cards
+    >> add_table_mcc_codes 
     >> add_data_users
     >> add_data_transactions
     >> add_data_cards

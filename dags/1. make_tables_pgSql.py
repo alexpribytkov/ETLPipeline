@@ -40,29 +40,7 @@ with DAG(
         """,
         )
     
-    add_table_users = PostgresOperator(
-        task_id="add_table_users",
-        postgres_conn_id="server_publicist",
-        sql=e.add_table_1_users
-        )
 
-    add_table_transactions = PostgresOperator(
-        task_id="add_table_transactions",
-        postgres_conn_id="server_publicist",
-        sql=e.add_table_2_transactions
-        )
-
-    add_table_cards = PostgresOperator(
-        task_id="add_table_cards",
-        postgres_conn_id="server_publicist",
-        sql=e.add_table_3_cards
-        )
-    
-    add_table_mcc_codes = PostgresOperator(
-        task_id="add_table_mcc_codes",
-        postgres_conn_id="server_publicist",
-        sql= e.add_table_4_mcc_codes
-        )
     
     add_table_currency = PostgresOperator(
         task_id="add_table_currency",
@@ -79,10 +57,6 @@ with DAG(
 (
     dag_start
     >> check_db_connection 
-    >> add_table_users
-    >> add_table_transactions
-    >> add_table_cards
-    >> add_table_mcc_codes
     >> add_table_currency
     >> add_table_market
     >> dag_end

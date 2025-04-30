@@ -1,48 +1,57 @@
+# 1. Импортируем нужные библиотеки
+import entities as e # Сюда запишем наши функции
 import clickhouse_func as cf
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow import DAG # Импорт дага
+from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
-from airflow.utils.dates import days_ago
 from clickhouse_driver import Client
+from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
+from airflow.utils.dates import days_ago
+from airflow.sensors.external_task import ExternalTaskSensor # проверяет статус задачи или DAG в другом DAG
 
+# Создаем подключение к ClickHouse
 client = Client(host=cf.host, 
                 port=cf.port,
                 user=cf.user, 
                 password=cf.password)
-
-
-
-# 1. Определяем настройки по умолчанию
-DEFAULT_ARGS = {
-    "owner": "admin",
-    "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
-    "retry_delay": 600, # задержка перед повторением
-    'start_date': days_ago(1)
-}
 
 # вводим функцию для исполнения sql скриптов в clickhouse
 def clickhouse_executor(sql_script):
     client.timeout = 3000
     client.execute(sql_script)
 
+# 2. Определяем настройки по умолчанию
+DEFAULT_ARGS = {
+    "owner": "admin",
+    "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
+    "retry_delay": 60, # задержка перед повторением
+    "start_date": days_ago(1)
+}
+
+
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="test_click",  # Уникальный ID DAG
-	description="FILL",
+	dag_id="3.1.CRM_data_clickhouse",  # Уникальный ID DAG
+	description="Миграция данных из CRM(бд - postgreSQL) в аналитическую СУБД - clickhouse",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
-	schedule='@daily',
+	schedule='@once',
     catchup=False,  # Отключить выполнение пропущенных запусков
-	max_active_runs=1,  
+	max_active_runs=1,
 	max_active_tasks=1
 ) as dag:
 
 # 4. Создание тАсок
 # сначала создаются два EmptyOperator (start_task и end_task), которые не выполняют никаких действий, а служат только для обозначения начала и конца рабочего процесса.   
     dag_start = EmptyOperator(task_id='dag_start')
-     
+    
     dag_end = EmptyOperator(task_id='dag_end')
 
+    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
+        task_id="wait_for_tables",
+        external_dag_id="3.CRM_data_pgsql"  # ID внешнего DAG
+    )
+     
     check_db_connection = PythonOperator(
         task_id="check_db_connection",
         python_callable=clickhouse_executor,
@@ -51,17 +60,12 @@ with DAG(
             }
         )
 
-    make_db = PythonOperator(
-        task_id="make_db",
-        python_callable=clickhouse_executor,
-        op_kwargs={
-            "sql_script": cf.make_db
-            }
-        )
+
+
 
 (
     dag_start
+    >> wait_for_tables
     >> check_db_connection
-    >> make_db
     >> dag_end
 )
