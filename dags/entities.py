@@ -137,6 +137,32 @@ er_transactions_users = """ALTER TABLE transactions ADD FOREIGN KEY (client_id) 
 
 er_transactions_cards ="""ALTER TABLE transactions ADD FOREIGN KEY (card_id) REFERENCES cards (id);"""
 
+create_datamart = """CREATE VIEW datamart AS
+select 
+	u.id as id_client,
+    u.current_age,
+    u.birth_year,
+    u.gender,
+    u.address,
+    u.credit_score,
+    u.num_credit_cards,
+    c.card_brand,
+	c.card_type,
+	c.has_chip,
+	c.num_cards_issued,
+	c.card_on_dark_web,
+	t.date,
+	t.use_chip,
+	t.merchant_id,
+	t.merchant_city,
+	t.merchant_state,
+	t.zip,
+	t.mcc,
+	t.errors
+from users u 
+left join cards c on c.client_id=u.id 
+left join transactions t on t.card_id=c.id and t.client_id=u.id"""
+
 #!!!!!!!!!!CURRENCY - DATA!!!!!!!!!!!
 start_date_cbr = '01/01/2010'
 end_date_cbr = datetime.now().strftime("%d/%m/%Y")

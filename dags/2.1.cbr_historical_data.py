@@ -1,20 +1,19 @@
 # 1. Импортируем нужные библиотеки
-import entities as e # Сюда запишем наши функции
+import clickhouse_func as cf # Сюда запишем наши функции
 from airflow import DAG # Импорт дага
 from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
-from airflow.providers.postgres.hooks.postgres import PostgresHook # Определяет, как подключиться к Postgres. Определили его в connection Airflow, с помощью компоуза
-from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
+from clickhouse_driver import Client
 from airflow.utils.dates import days_ago
 import requests #Для запросов к серверу
 import xml.etree.ElementTree as ET
 
-# 1. Определяем настройки по умолчанию
+# Определяем настройки по умолчанию
 DEFAULT_ARGS = {
     "owner": "admin",
     "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
     "retry_delay": 60, # задержка перед повторением
-    'start_date': days_ago(1)
+    "start_date": days_ago(1)
 }
 
 # Тянем по API данные в формате XML и сохраняем их в локальный файл `path` XML 
@@ -24,11 +23,21 @@ def extract_data(url, path):
   with open(path, "w", encoding="utf-8") as tmp_file:
     tmp_file.write(request.text)  # Записываем текст ответа в файл
 
+# Создаем подключение к ClickHouse
+client = Client(host=cf.host, 
+                port=cf.port,
+                user=cf.user, 
+                password=cf.password)
+
+# вводим функцию для исполнения sql скриптов в clickhouse
+def clickhouse_executor(sql_script):
+    client.timeout = 3000
+    client.execute(sql_script)
+
+
+
 # Создаем подключение c помощью psycopg2, читаем файл и записываем данные в бд с помощью «INSERT» запроса
-def load_data(postgres_conn_id, path, sql_script):
-  hook = PostgresHook(postgres_conn_id=postgres_conn_id) # обозначаем hook (коннектор)
-  conn = hook.get_conn() # this returns psycopg2.connect() object
-  cursor = conn.cursor() #  Создаем курсор psycopg2 для выполнения запросов 
+def load_data(path, sql_script):
   # Устанавливаем парсер для XML с кодировкой UTF-8
   parser = ET.XMLParser(encoding="utf-8")
   # Чтение XML файла
@@ -48,9 +57,51 @@ def load_data(postgres_conn_id, path, sql_script):
         currency = 'CNY'
     currency_data.append((date,rate,currency)) # Добавляем полученные данные в список строк
   # Пакетная вставка
-  cursor.executemany(sql_script, currency_data)
+  client.execute_iter(sql_script, currency_data)
   conn.commit()
   conn.close()  # закрыть соединение 
+
+
+
+
+
+# 3. Инициализируем DAG
+with DAG(
+	dag_id="3.1.CRM_data_clickhouse",  # Уникальный ID DAG
+	description="Миграция данных из CRM(бд - postgreSQL) в аналитическую СУБД - clickhouse",
+	default_args=DEFAULT_ARGS,
+	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
+	schedule='@once',
+    catchup=False,  # Отключить выполнение пропущенных запусков
+	max_active_runs=1,
+	max_active_tasks=1
+) as dag:
+
+# 4. Создание тАсок
+# сначала создаются два EmptyOperator (start_task и end_task), которые не выполняют никаких действий, а служат только для обозначения начала и конца рабочего процесса.   
+    dag_start = EmptyOperator(task_id='dag_start')
+    
+    dag_end = EmptyOperator(task_id='dag_end')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 3. Инициализируем DAG
 with DAG(
@@ -77,13 +128,7 @@ with DAG(
             SELECT 1
         """,
         )
-    
-    add_table_currency = PostgresOperator(
-        task_id="add_table_currency",
-        postgres_conn_id="server_publicist",
-        sql= e.add_table_5_currency
-        )
-    
+
     extract_usd = PythonOperator(
         task_id="extract_usd",
         python_callable=extract_data,
@@ -92,7 +137,7 @@ with DAG(
             "path": e.path_s3(e.S3, 'USD')
             }
         )
-        
+    
     load_usd = PythonOperator(
         task_id="load_usd",
         python_callable=load_data,
@@ -143,8 +188,7 @@ with DAG(
 
 (
     dag_start
-    >> check_db_connection
-    >> add_table_currency 
+    >> check_db_connection 
     >> extract_usd
     >> load_usd
     >> extract_eur

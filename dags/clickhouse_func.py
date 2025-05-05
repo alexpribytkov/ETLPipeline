@@ -11,15 +11,17 @@ mcc_codes="""CREATE TABLE IF NOT EXISTS mcc_codes(
         code UInt32,
         description String
 )
-ENGINE = PostgreSQL(
-    'server_publicist:5432',  -- Адрес PostgreSQL
-    'postgres_publicist',        -- Имя БД
-    'mcc_codes',     -- Имя таблицы
-    'postgres',           -- Пользователь
-    'postgres'        -- Пароль
-);"""
-
-
+ENGINE = MergeTree()  -- Самый популярный движок для аналитических данных
+ORDER BY id;  -- Определяет порядок сортировки (не требует уникальности)
+"""
+insert_mcc_codes="""INSERT INTO mcc_codes 
+SELECT id, current_age,birth_year,gender,address,credit_score,num_credit_cards FROM postgresql(    
+'server_publicist:5432',
+'postgres_publicist',
+'users',
+'postgres',
+'postgres')
+"""
 
 create_table_users="""CREATE TABLE IF NOT EXISTS users (
     id Int32,
@@ -41,12 +43,6 @@ insert_users="""INSERT INTO users SELECT id, current_age,birth_year,gender,addre
 'postgres',
 'postgres')
 """
-
-
-
-
-
-
 
 
 

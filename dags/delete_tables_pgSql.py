@@ -73,10 +73,18 @@ with DAG(
         postgres_conn_id="server_publicist",
         sql= 'drop table market_data'
         )
+    
+    drop_datamart = PostgresOperator(
+        task_id="drop_datamart",
+        postgres_conn_id="server_publicist",
+        sql= 'DROP view datamart'
+        )
+
 
 (
     dag_start
-    >> check_db_connection 
+    >> check_db_connection
+    >> drop_datamart
     >> delete_table_currency
     >> delete_table_market
     >> delete_table_mcc_codes

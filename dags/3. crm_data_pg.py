@@ -153,7 +153,12 @@ with DAG(
         postgres_conn_id="server_publicist",
         sql= e.er_transactions_cards
         )  
-
+    
+    create_datamart = PostgresOperator(
+        task_id="create_datamart",
+        postgres_conn_id="server_publicist",
+        sql= e.create_datamart
+        )  
 (
     dag_start
     >> check_db_connection
@@ -167,6 +172,7 @@ with DAG(
     >> add_data_mcc_codes
     >> er_cards_users 
     >> er_transactions_users 
-    >> er_transactions_cards 
+    >> er_transactions_cards
+    >> create_datamart 
     >> dag_end
 )

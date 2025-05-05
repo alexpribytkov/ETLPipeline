@@ -1,13 +1,19 @@
 # 1. Импортируем нужные библиотеки
-import entities as e # Сюда запишем наши функции
-import clickhouse_func as cf
+import clickhouse_func as cf # Сюда запишем наши функции
 from airflow import DAG # Импорт дага
 from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
 from clickhouse_driver import Client
-from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
 from airflow.utils.dates import days_ago
 from airflow.sensors.external_task import ExternalTaskSensor # проверяет статус задачи или DAG в другом DAG
+
+# Определяем настройки по умолчанию
+DEFAULT_ARGS = {
+    "owner": "admin",
+    "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
+    "retry_delay": 60, # задержка перед повторением
+    "start_date": days_ago(1)
+}
 
 # Создаем подключение к ClickHouse
 client = Client(host=cf.host, 
@@ -19,15 +25,6 @@ client = Client(host=cf.host,
 def clickhouse_executor(sql_script):
     client.timeout = 3000
     client.execute(sql_script)
-
-# 2. Определяем настройки по умолчанию
-DEFAULT_ARGS = {
-    "owner": "admin",
-    "retries": 2,  # Количество повторений при ошибке, которые должны быть выполнены перед failing the task
-    "retry_delay": 60, # задержка перед повторением
-    "start_date": days_ago(1)
-}
-
 
 # 3. Инициализируем DAG
 with DAG(
@@ -47,8 +44,8 @@ with DAG(
     
     dag_end = EmptyOperator(task_id='dag_end')
 
-    wait_for_tables = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
-        task_id="wait_for_tables",
+    wait_for_data = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
+        task_id="wait_for_data",
         external_dag_id="3.CRM_data_pgsql"  # ID внешнего DAG
     )
      
@@ -60,12 +57,18 @@ with DAG(
             }
         )
 
-
-
+    make_db = PythonOperator(
+        task_id="make_db",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.make_db
+            }
+        )
 
 (
     dag_start
-    >> wait_for_tables
+    >> wait_for_data
     >> check_db_connection
+    >> make_db
     >> dag_end
 )

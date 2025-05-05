@@ -84,7 +84,13 @@ with DAG(
             SELECT 1
         """,
         )
-
+    
+    add_table_market = PostgresOperator(
+        task_id="add_table_market",
+        postgres_conn_id="server_publicist",
+        sql= e.add_table_6_market
+        )
+    
     extract_data = PythonOperator(
         task_id="extract_data",
         python_callable=extract_market_moex,
@@ -107,6 +113,7 @@ with DAG(
 (
     dag_start
     >> check_db_connection
+    >> add_table_market
     >> extract_data
     >> load_data
     >> dag_end
