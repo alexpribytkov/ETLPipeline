@@ -61,7 +61,7 @@ def load_market_moex(postgres_conn_id, path, sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="4.Market_data",  # Уникальный ID DAG
+	dag_id="2.Market_data",  # Уникальный ID DAG
 	description="Ежедневная загрузка рыночной инфы",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG

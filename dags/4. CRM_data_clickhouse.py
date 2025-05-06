@@ -28,8 +28,8 @@ def clickhouse_executor(sql_script):
 
 # 3. Инициализируем DAG
 with DAG(
-	dag_id="3.1.CRM_data_clickhouse",  # Уникальный ID DAG
-	description="Миграция данных из CRM(бд - postgreSQL) в аналитическую СУБД - clickhouse",
+	dag_id="4.Data_clickhouse",  # Уникальный ID DAG
+	description="Миграция данных из postgreSQL в clickhouse",
 	default_args=DEFAULT_ARGS,
 	tags=['admin'], # ТЭГ,  по значению тега можно искать экземпляры DAG
 	schedule='@once',
@@ -44,10 +44,10 @@ with DAG(
     
     dag_end = EmptyOperator(task_id='dag_end')
 
-    wait_for_data = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
+    """wait_for_data = ExternalTaskSensor( # проверяет статус задачи или DAG в другом DAG
         task_id="wait_for_data",
         external_dag_id="3.CRM_data_pgsql"  # ID внешнего DAG
-    )
+    )"""
      
     check_db_connection = PythonOperator(
         task_id="check_db_connection",
@@ -65,10 +65,73 @@ with DAG(
             }
         )
 
+    crm_postgres_replication = PythonOperator(
+        task_id="crm_postgres",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.crm_postgres
+            }
+        )
+
+    crm_datamart = PythonOperator(
+        task_id="crm_datamart",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.crm_datamart
+            }
+        )
+
+    pg_click_migration_crm = PythonOperator(
+        task_id="pg_click_migration_crm",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.pg_click_migration_crm
+            }
+        )
+
+    mcc_codes = PythonOperator(
+        task_id="mcc_codes",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.mcc_codes
+            }
+        )
+
+    pg_click_migration_mcc_codes = PythonOperator(
+        task_id="pg_click_migration_mcc_codes",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.pg_click_migration_mcc_codes
+            }
+        )
+
+    table_exchange = PythonOperator(
+        task_id="table_exchange",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.table_exchange
+            }
+        )
+
+    pg_click_migration_exchange = PythonOperator(
+        task_id="pg_click_migration_exchange",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.pg_click_migration_exchange
+            }
+        )
+
 (
     dag_start
-    >> wait_for_data
+    #>> wait_for_data
     >> check_db_connection
     >> make_db
+    >> crm_postgres_replication
+    >> crm_datamart
+    >> pg_click_migration_crm
+    >> mcc_codes
+    >> pg_click_migration_mcc_codes
+    >> table_exchange
+    >> pg_click_migration_exchange
     >> dag_end
 )
