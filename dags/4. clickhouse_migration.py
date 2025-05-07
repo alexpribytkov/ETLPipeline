@@ -1,6 +1,8 @@
 # 1. Импортируем нужные библиотеки
-import clickhouse_func as cf # Сюда запишем наши функции
+import clickhouse_func as cf
+import entities as e
 from airflow import DAG # Импорт дага
+from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
 from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
 from clickhouse_driver import Client
@@ -121,6 +123,52 @@ with DAG(
             }
         )
 
+    drop_na_open = PostgresOperator(
+        task_id="drop_na_open",
+        postgres_conn_id="server_publicist",
+        sql=e.drop_na_1
+        )
+
+    drop_na_low = PostgresOperator(
+        task_id="drop_na_low",
+        postgres_conn_id="server_publicist",
+        sql=e.drop_na_2
+        )
+
+    drop_na_high = PostgresOperator(
+        task_id="drop_na_high",
+        postgres_conn_id="server_publicist",
+        sql=e.drop_na_3
+        )
+
+    drop_na_close = PostgresOperator(
+        task_id="drop_na_close",
+        postgres_conn_id="server_publicist",
+        sql=e.drop_na_4
+        )
+
+    drop_na_volume = PostgresOperator(
+        task_id="drop_na_volume",
+        postgres_conn_id="server_publicist",
+        sql=e.drop_na_5
+        )
+
+    market_data_ch = PythonOperator(
+        task_id="market_data_ch",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.market_data_ch
+            }
+        )
+
+    pg_click_migration_market_data = PythonOperator(
+        task_id="pg_click_migration_market_data",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": cf.pg_click_migration_market_data
+            }
+        )
+
 (
     dag_start
     #>> wait_for_data
@@ -133,5 +181,12 @@ with DAG(
     >> pg_click_migration_mcc_codes
     >> table_exchange
     >> pg_click_migration_exchange
+    >> drop_na_open
+    >> drop_na_low
+    >> drop_na_high
+    >> drop_na_close
+    #>> drop_na_volume
+    >> market_data_ch
+    >> pg_click_migration_market_data
     >> dag_end
 )

@@ -98,14 +98,40 @@ ORDER BY id;  -- Определяет порядок сортировки (не 
 """
 
 pg_click_migration_mcc_codes="""INSERT INTO mcc_codes 
-SELECT id, current_age,birth_year,gender,address,credit_score,num_credit_cards FROM postgresql(    
+SELECT id, code, description FROM postgresql(    
 'server_publicist:5432',
 'postgres_publicist',
-'users',
+'mcc_codes',
 'postgres',
 'postgres')
 """
 
 ##########
-"""Прочитать json и csv в кликхаус"""
+market_data_ch="""
+CREATE TABLE IF NOT EXISTS data.market_data
+(
+    id                        Int32,
+    boardid                   String,
+    tradedate                 Date,
+    shortname                 String,
+    secid                     String,
+    open                      Decimal(18, 2),
+    low                       Decimal(18, 2),
+    high                      Decimal(18, 2),
+    close                     Decimal(18, 2),
+    volume                    Int64
+)
+ENGINE = MergeTree()
+ORDER BY (tradedate desc)
+SETTINGS allow_experimental_reverse_key = 1
+"""
+
+pg_click_migration_market_data="""
+INSERT INTO data.market_data SELECT id, boardid, tradedate, shortname, secid, open, low, high, close, volume  FROM postgresql(    
+'server_publicist:5432',  -- Адрес PostgreSQL
+'postgres_publicist',        -- Имя БД
+'market_data',     -- Имя таблицы
+'postgres',           -- Пользователь
+'postgres')
+"""
 ##########

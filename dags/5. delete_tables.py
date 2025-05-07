@@ -1,8 +1,11 @@
 # 1. Импортируем нужные библиотеки
+import clickhouse_func as cf
 from airflow import DAG # Импорт дага
 from airflow.operators.empty import EmptyOperator # Оператор-пустышка, типо pass в python
 from airflow.providers.postgres.operators.postgres import PostgresOperator # Запустить SQL-запрос
 from airflow.utils.dates import days_ago
+from airflow.operators.python import PythonOperator # Позволяет выполнять функции на языке Python
+from clickhouse_driver import Client
 
 # 1. Определяем настройки по умолчанию
 DEFAULT_ARGS = {
@@ -11,6 +14,18 @@ DEFAULT_ARGS = {
     "retry_delay": 600, # задержка перед повторением
     'start_date': days_ago(1)
 }
+
+# Создаем подключение к ClickHouse
+client = Client(host=cf.host, 
+                port=cf.port,
+                user=cf.user, 
+                password=cf.password)
+
+# вводим функцию для исполнения sql скриптов в clickhouse
+def clickhouse_executor(sql_script):
+    client.timeout = 3000
+    client.execute(sql_script)
+
 
 # 2. Инициализируем DAG
 with DAG(
@@ -80,6 +95,13 @@ with DAG(
         sql= 'DROP view datamart'
         )
 
+    drop_database_ch = PythonOperator(
+        task_id="drop_database_ch",
+        python_callable=clickhouse_executor,
+        op_kwargs={
+            "sql_script": 'DROP database data'
+            }
+        )
 
 (
     dag_start
@@ -91,5 +113,6 @@ with DAG(
     >> delete_table_transactions
     >> delete_table_cards
     >> delete_table_users
+    >> drop_database_ch
     >> dag_end
 )

@@ -261,3 +261,29 @@ data_table_6_market = """
                 TRENDCLSPR,
                 TRADE_SESSION_DATE
         ) FROM STDIN WITH CSV"""
+
+drop_na_1="""
+update market_data
+set open = null
+WHERE OPEN = 'NaN'
+"""
+
+
+drop_na_2="""
+update market_data
+set low = null
+WHERE low = 'NaN'
+"""
+
+
+drop_na_3="""
+update market_data
+set HIGH = null
+WHERE HIGH = 'NaN'
+"""
+
+drop_na_4="""
+update market_data
+set CLOSE = null
+WHERE CLOSE = 'NaN'
+"""
